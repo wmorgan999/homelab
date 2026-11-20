@@ -47,24 +47,28 @@ public class CustomerController {
 
     @PutMapping("/{id}")
     public ResponseEntity<Customer> update(@PathVariable Long id, @RequestBody Customer body) {
-        return repo.findById(id).map(existing -> {
-            existing.setName(body.getName());
-            existing.setEmail(body.getEmail());
-            // saveAndFlush sends the UPDATE now, so a duplicate email fails here
-            // (and reaches the handler below) instead of at some later commit.
-            Customer saved = repo.saveAndFlush(existing);
-            publish("CUSTOMER_UPDATED", saved);
-            return ResponseEntity.ok(saved);
-        }).orElse(ResponseEntity.notFound().build());
+        Customer existing = repo.findById(id).orElse(null);
+        if (existing == null) {
+            return ResponseEntity.notFound().build();
+        }
+        existing.setName(body.getName());
+        existing.setEmail(body.getEmail());
+        // saveAndFlush sends the UPDATE now, so a duplicate email fails here
+        // (and reaches the handler below) instead of at some later commit.
+        Customer saved = repo.saveAndFlush(existing);
+        publish("CUSTOMER_UPDATED", saved);
+        return ResponseEntity.ok(saved);
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
-        return repo.findById(id).map(existing -> {
-            repo.delete(existing);
-            publish("CUSTOMER_DELETED", existing);
-            return ResponseEntity.<Void>noContent().build();
-        }).orElse(ResponseEntity.notFound().build());
+        Customer existing = repo.findById(id).orElse(null);
+        if (existing == null) {
+            return ResponseEntity.notFound().build();
+        }
+        repo.delete(existing);
+        publish("CUSTOMER_DELETED", existing);
+        return ResponseEntity.noContent().build();
     }
 
     // A unique-constraint violation used to surface as a generic 500.
